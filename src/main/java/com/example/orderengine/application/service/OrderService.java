@@ -6,6 +6,8 @@ import com.example.orderengine.domain.enums.OrderStatus;
 import com.example.orderengine.domain.enums.PaymentType;
 import com.example.orderengine.infrastructure.messaging.NotificationMessage;
 import com.example.orderengine.infrastructure.messaging.NotificationProducer;
+import com.example.orderengine.shared.patterns.OrderPriorityQueue;
+import com.example.orderengine.shared.patterns.RateLimiter;
 import com.example.orderengine.shared.patterns.observer.OrderEventPublisher;
 import com.example.orderengine.shared.patterns.strategy.PaymentContext;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,8 @@ public class OrderService {
     private final PaymentContext paymentContext;         // Strategy pattern
     private final OrderEventPublisher eventPublisher;   // Observer pattern
     private final NotificationProducer notificationProducer;
+    private final OrderPriorityQueue orderPriorityQueue;
+    private final RateLimiter rateLimiter;
     // ──────────────────────────────────────────────────
     // CREATE ORDER — Builder + Strategy + Observer
     // ──────────────────────────────────────────────────
@@ -34,6 +38,14 @@ public class OrderService {
                              PaymentType paymentType) {
 
         log.info("Creating order for {}", customerName);
+
+        // ✅ DSA — Rate Limiter check first
+        if (!rateLimiter.isAllowed(customerName)) {
+            throw new RuntimeException(
+                    "Rate limit exceeded for: " + customerName +
+                            ". Max 5 orders per minute allowed."
+            );
+        }
 
         // Builder Pattern ✅
         Order order = new Order.Builder()
@@ -64,6 +76,10 @@ public class OrderService {
                 saved.getCustomerName() + "@gmail.com"  // placeholder
         );
         notificationProducer.sendNotification(message);
+
+        // ✅ DSA — add to priority queue
+        orderPriorityQueue.enqueue(saved);
+        orderPriorityQueue.printQueue();
 
         return saved;
     }
