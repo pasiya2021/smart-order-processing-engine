@@ -373,3 +373,38 @@ RabbitMQ UI      → localhost:15672
 **Pasindu** — 4th Year IT Undergraduate, University of Moratuwa, Sri Lanka
 
 > *"Built to demonstrate production-level backend engineering — Design Patterns, Clean Architecture, System Design, DSA, and AWS Cloud Deployment."*
+>
+> ## 📸 Screenshots
+
+### Application Running on IntelliJ IDEA
+![Live Application](screenshots/1.png)
+
+### Application Running on IntelliJ IDEA
+![Live Application](screenshots/2.png)
+
+### SSH Connection
+![Live Application](screenshots/3.png)
+
+### SSH Connection
+![Live Application](screenshots/4.png)
+
+### AWS Console
+![Live Application](screenshots/5.png)
+
+### AWS Console
+![Live Application](screenshots/6.png)
+
+### AWS Console
+![Live Application](screenshots/7.png)
+
+### AWS Console
+![Live Application](screenshots/8.png)
+
+### AWS Console
+![Live Application](screenshots/9.png)
+
+### Postman test with real IP
+![Live Application](screenshots/10.png)
+
+### Postman test with real IP
+![Live Application](screenshots/11.png)
