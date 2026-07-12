@@ -377,34 +377,34 @@ RabbitMQ UI      → localhost:15672
 > ## 📸 Screenshots
 
 ### Application Running on IntelliJ IDEA
-![Live Application](screenshots/1.png)
+![Live Application](screenshorts/1.png)
 
 ### Application Running on IntelliJ IDEA
-![Live Application](screenshots/2.png)
+![Live Application](screenshorts/2.png)
 
 ### SSH Connection
-![Live Application](screenshots/3.png)
+![Live Application](screenshorts/3.png)
 
 ### SSH Connection
-![Live Application](screenshots/4.png)
+![Live Application](screenshorts/4.png)
 
 ### AWS Console
-![Live Application](screenshots/5.png)
+![Live Application](screenshorts/5.png)
 
 ### AWS Console
-![Live Application](screenshots/6.png)
+![Live Application](screenshorts/6.png)
 
 ### AWS Console
-![Live Application](screenshots/7.png)
+![Live Application](screenshorts/7.png)
 
 ### AWS Console
-![Live Application](screenshots/8.png)
+![Live Application](screenshorts/8.png)
 
 ### AWS Console
-![Live Application](screenshots/9.png)
+![Live Application](screenshorts/9.png)
 
 ### Postman test with real IP
-![Live Application](screenshots/10.png)
+![Live Application](screenshorts/10.png)
 
 ### Postman test with real IP
-![Live Application](screenshots/11.png)
+![Live Application](screenshorts/11.png)
