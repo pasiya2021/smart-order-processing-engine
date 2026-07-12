@@ -1,6 +1,13 @@
 # 🚀 Smart Order Processing & Notification Engine
 
-> A production-style Spring Boot backend system demonstrating **Clean Architecture**, **Design Patterns**, **Redis Caching**, and **Async Messaging with RabbitMQ**.
+> A **production-grade Spring Boot backend** demonstrating Clean Architecture, Design Patterns, Redis Caching, Async Messaging, and AWS Cloud Deployment.
+
+[![Java](https://img.shields.io/badge/Java-17-orange)](https://www.java.com)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green)](https://spring.io/projects/spring-boot)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-blue)](https://www.docker.com)
+[![AWS](https://img.shields.io/badge/AWS-Deployed-yellow)](https://aws.amazon.com)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Async%20Messaging-orange)](https://www.rabbitmq.com)
+[![Redis](https://img.shields.io/badge/Redis-Caching-red)](https://redis.io)
 
 ---
 
@@ -9,25 +16,30 @@
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Design Patterns](#design-patterns)
+- [SOLID Principles](#solid-principles)
+- [DSA Implementations](#dsa-implementations)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Request Flow](#request-flow)
 - [API Endpoints](#api-endpoints)
-- [How to Run](#how-to-run)
-- [Docker Services](#docker-services)
-- [Key Learning Points](#key-learning-points)
+- [Cloud Deployment](#cloud-deployment)
+- [How to Run Locally](#how-to-run-locally)
+- [How to Run with Docker](#how-to-run-with-docker)
 
 ---
 
 ## 📖 Overview
 
-This project simulates a real-world **Order Processing System** where:
+This project simulates a real-world **Order Processing System** built with production-level standards:
 
-- Orders are created with **validated input** and processed with the correct **payment method**
-- **Observers** automatically react to order status changes (email, inventory)
-- **Notifications** are sent asynchronously via **RabbitMQ** — users never wait
-- Frequent reads are served from **Redis cache** — reducing DB load
-- All layers are cleanly separated following **Clean Architecture + SOLID principles**
+- Orders created with **validated input**, processed with correct **payment strategy**
+- **Observer Pattern** auto-reacts to order status changes (email, inventory)
+- **Notifications** sent asynchronously via **RabbitMQ** — users never wait
+- Frequent reads served from **Redis Cache** — reducing DB load
+- **Priority Queue** ensures VIP orders processed first
+- **Rate Limiter** prevents order spam (sliding window algorithm)
+- **Deployed on AWS** — EC2, RDS PostgreSQL, ECR
+- **Dockerized** with multi-stage build for production
 
 ---
 
@@ -37,28 +49,87 @@ This project simulates a real-world **Order Processing System** where:
 Client (Postman / REST)
           │
           ▼
-  [ Controller Layer ]       →   Receives HTTP requests, validates DTOs
+  [ Controller Layer ]       →   HTTP requests, DTO validation
           │
           ▼
   [ Service Layer ]          →   Business logic + Design Patterns
           │
           ▼
-  [ Port Interfaces ]        →   SOLID Dependency Inversion (contracts)
+  [ Port Interfaces ]        →   SOLID Dependency Inversion
           │
           ▼
-  [ Infrastructure Layer ]   →   Redis · RabbitMQ · H2 Database · JPA
+  [ Infrastructure Layer ]   →   Redis · RabbitMQ · PostgreSQL · JPA
+```
+
+### Cloud Architecture
+```
+Developer Machine
+      │ git push
+      ▼
+   GitHub
+      │
+      ▼
+  Docker Build
+      │ push image
+      ▼
+  AWS ECR (Registry)
+      │ pull image
+      ▼
+  AWS EC2 (App Server)
+  ├── Spring Boot App
+  ├── Redis Container
+  └── RabbitMQ Container
+      │
+      ▼
+  AWS RDS (PostgreSQL)
 ```
 
 ---
 
 ## 🎨 Design Patterns
 
-| Pattern | Where Used | Purpose |
+| Pattern | Location | Purpose |
 |---|---|---|
-| 🔨 **Builder** | `Order.java` | Clean object construction with many fields |
-| ⚡ **Strategy** | `PaymentContext.java` | Swap payment methods at runtime (Credit Card / PayPal / COD) |
+| 🔨 **Builder** | `Order.java` | Clean object construction with many optional fields |
+| ⚡ **Strategy** | `PaymentContext.java` | Swap payment methods at runtime without if-else |
 | 👁️ **Observer** | `OrderEventPublisher.java` | Auto-notify Email + Inventory on status change |
-| 🏭 **Factory** | `NotificationFactory.java` | Pick right notification sender (Email / SMS / Push) |
+| 🏭 **Factory** | `NotificationFactory.java` | Pick right notification sender dynamically |
+
+### Builder Pattern
+```java
+Order order = new Order.Builder()
+    .customerName("Pasindu")
+    .productName("Laptop")
+    .quantity(2)
+    .totalPrice(150000.0)
+    .shippingAddress("Colombo")
+    .priority(5)
+    .paymentType(PaymentType.CREDIT_CARD)
+    .build();
+```
+
+### Strategy Pattern
+```java
+// Picks right payment at runtime — no if-else needed
+paymentContext.executePayment("CREDIT_CARD", 150000.0);
+// Add new payment? Just add one class. Nothing else changes.
+```
+
+### Observer Pattern
+```java
+// All observers notified automatically on status change
+eventPublisher.notifyStatusChange(order, OrderStatus.CONFIRMED);
+// EmailObserver → fires
+// InventoryObserver → fires
+// Add SMS? Just create SmsObserver. Service unchanged.
+```
+
+### Factory Pattern
+```java
+// Factory picks right sender — no switch/if-else
+NotificationSender sender = notificationFactory.getSender("EMAIL");
+sender.send("user@gmail.com", "Your order is confirmed!");
+```
 
 ---
 
@@ -66,11 +137,40 @@ Client (Postman / REST)
 
 | Principle | Implementation |
 |---|---|
-| **S** — Single Responsibility | Each class has one job (e.g. `EmailSender` only sends email) |
-| **O** — Open/Closed | Add new payment type → just add a new class, no existing code changes |
-| **L** — Liskov Substitution | Any `PaymentStrategy` implementation works interchangeably |
-| **I** — Interface Segregation | Small focused interfaces (`OrderRepositoryPort`, `NotificationSenderPort`) |
-| **D** — Dependency Inversion | `OrderService` depends on `OrderRepositoryPort` interface, not JPA directly |
+| **S** — Single Responsibility | Each class has one job |
+| **O** — Open/Closed | Add new payment/notification — just add a class, no changes |
+| **L** — Liskov Substitution | Any `PaymentStrategy` works interchangeably |
+| **I** — Interface Segregation | Small focused interfaces per layer |
+| **D** — Dependency Inversion | `OrderService` depends on `OrderRepositoryPort` interface, not JPA |
+
+```java
+// Service depends on interface — not concrete implementation
+private final OrderRepositoryPort orderRepository;  // SOLID-D
+
+// Swap H2 → PostgreSQL → MongoDB?
+// Only change the adapter. Service never touches.
+```
+
+---
+
+## 📊 DSA Implementations
+
+### 1. Priority Queue — VIP Order Processing
+```java
+// Higher priority orders processed first
+PriorityQueue<Order> queue = new PriorityQueue<>();
+queue.offer(order); // O(log n) insert
+queue.poll();       // O(log n) remove — always gets highest priority
+```
+
+### 2. Sliding Window Rate Limiter
+```java
+// Max 5 orders per customer per 60 seconds
+// Uses Deque + HashMap — O(1) amortized per request
+if (!rateLimiter.isAllowed(customerName)) {
+    throw new RuntimeException("Rate limit exceeded!");
+}
+```
 
 ---
 
@@ -82,10 +182,14 @@ Client (Postman / REST)
 | **Spring Boot 3.2** | Application framework |
 | **Spring Data JPA** | Database access layer |
 | **Spring Data Redis** | Caching layer |
-| **Spring AMQP** | RabbitMQ messaging |
-| **H2 Database** | In-memory database (dev) |
-| **Lombok** | Reduce boilerplate code |
-| **Docker** | Run Redis + RabbitMQ locally |
+| **Spring AMQP** | RabbitMQ async messaging |
+| **PostgreSQL (RDS)** | Production database |
+| **H2** | In-memory DB for local dev |
+| **Docker** | Containerization |
+| **AWS EC2** | App server |
+| **AWS RDS** | Managed PostgreSQL |
+| **AWS ECR** | Docker image registry |
+| **Lombok** | Boilerplate reduction |
 
 ---
 
@@ -94,55 +198,35 @@ Client (Postman / REST)
 ```
 src/main/java/com/example/orderengine/
 │
-├── 📁 domain/                          →  Pure business objects (no Spring/JPA)
-│   ├── entity/
-│   │   └── Order.java                  →  Order entity + Builder Pattern
-│   └── enums/
-│       ├── OrderStatus.java
-│       ├── PaymentType.java
-│       └── NotificationType.java
+├── domain/                          →  Pure business objects
+│   ├── entity/Order.java            →  Order entity + Builder Pattern
+│   └── enums/                       →  OrderStatus, PaymentType
 │
-├── 📁 application/                     →  Business logic & use cases
-│   ├── service/
-│   │   └── OrderService.java           →  Core service (Strategy + Observer + Cache)
-│   └── port/
-│       ├── OrderRepositoryPort.java    →  DB contract interface (SOLID-D)
-│       └── NotificationSenderPort.java →  Notification contract interface
+├── application/                     →  Business logic
+│   ├── service/OrderService.java    →  Core service (all patterns wired)
+│   └── port/                        →  Interface contracts (SOLID-D)
 │
-├── 📁 infrastructure/                  →  Technical implementations
-│   ├── cache/
-│   │   └── RedisCacheConfig.java       →  Redis cache configuration
-│   ├── messaging/
-│   │   ├── RabbitMQConfig.java         →  Queue + Exchange setup
-│   │   ├── NotificationMessage.java    →  Message model
-│   │   ├── NotificationProducer.java   →  Sends message to queue
-│   │   └── NotificationConsumer.java   →  Receives + processes message
-│   └── persistence/
-│       ├── SpringDataOrderRepository.java   →  JPA repository
-│       └── JpaOrderRepositoryAdapter.java   →  Implements OrderRepositoryPort
+├── infrastructure/                  →  Technical implementations
+│   ├── cache/                       →  Redis configuration
+│   ├── messaging/                   →  RabbitMQ Producer + Consumer
+│   └── persistence/                 →  JPA Repository Adapter
 │
-├── 📁 interfaces/                      →  Talks to outside world
-│   └── controller/
-│       ├── OrderController.java        →  REST API endpoints
-│       └── dto/
-│           ├── CreateOrderRequest.java →  Input DTO with validation
-│           └── UpdateStatusRequest.java
+├── interfaces/                      →  REST Controllers + DTOs
 │
-└── 📁 shared/                          →  Reusable components
-    ├── exception/
-    │   └── GlobalExceptionHandler.java →  Handles all errors cleanly
+└── shared/                          →  Reusable patterns
+    ├── exception/                   →  Global Exception Handler
     └── patterns/
-        ├── factory/                    →  Factory Pattern (Notification)
-        ├── strategy/                   →  Strategy Pattern (Payment)
-        └── observer/                   →  Observer Pattern (Order Events)
+        ├── factory/                 →  Notification Factory
+        ├── strategy/                →  Payment Strategies
+        ├── observer/                →  Order Event Observers
+        ├── OrderPriorityQueue.java  →  DSA: Priority Queue
+        └── RateLimiter.java        →  DSA: Sliding Window
 ```
 
 ---
 
 ## 🔄 Request Flow
-
-### POST /api/orders — Create Order
-
+POST /api/orders — Create Order
 ```
 1. Postman sends POST request
          │
@@ -171,34 +255,33 @@ src/main/java/com/example/orderengine/
            └── EmailNotificationSender → 📧 email sent
 ```
 
-### GET /api/orders/{id} — Redis Cache
+---
+GET /api/orders/{id} — Redis Cache
 
 ```
 First call:
-  → @Cacheable checks Redis → miss
-  → hits H2 database
-  → stores result in Redis
-  → returns response
+→ @Cacheable checks Redis → miss
+→ hits H2 database
+→ stores result in Redis
+→ returns response
 
 Second call:
-  → @Cacheable checks Redis → hit ⚡
-  → returns from Redis (no DB call)
+→ @Cacheable checks Redis → hit ⚡
+→ returns from Redis (no DB call)
 ```
-
----
-
 ## 📬 API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/orders` | Create a new order |
-| `GET` | `/api/orders` | Get all orders |
-| `GET` | `/api/orders/{id}` | Get order by ID *(Redis cached)* |
-| `PATCH` | `/api/orders/{id}/status` | Update order status |
+| `POST` | `/api/orders` | Create order |
+| `GET` | `/api/orders` | Get all orders (cached) |
+| `GET` | `/api/orders/{id}` | Get by ID (Redis cached) |
+| `PATCH` | `/api/orders/{id}/status` | Update status |
 | `DELETE` | `/api/orders/{id}` | Delete order |
+| `GET` | `/api/orders/queue/next` | Get highest priority order |
+| `GET` | `/api/orders/queue/size` | Queue size |
 
-### Sample Create Order Request
-
+### Sample Request
 ```json
 {
     "customerName": "Pasindu",
@@ -206,95 +289,87 @@ Second call:
     "quantity": 2,
     "totalPrice": 150000.0,
     "shippingAddress": "Colombo",
-    "priority": 3,
+    "priority": 5,
     "paymentType": "CREDIT_CARD"
 }
 ```
 
-### Sample Update Status Request
+---
 
-```json
-{
-    "status": "CONFIRMED"
-}
-```
+## ☁️ Cloud Deployment (AWS)
 
-### Payment Types
 ```
-CREDIT_CARD | PAYPAL | CASH_ON_DELIVERY
+AWS ap-south-1 (Mumbai Region)
+├── EC2 t2.micro     → Runs Docker containers (App + Redis + RabbitMQ)
+├── RDS PostgreSQL   → Managed production database
+└── ECR              → Docker image registry
 ```
 
-### Order Status Values
-```
-PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED → CANCELLED
+### Deploy Steps
+```bash
+# Build and push to ECR
+docker build -t orderengine .
+docker tag orderengine:latest <account-id>.dkr.ecr.ap-south-1.amazonaws.com/orderengine:latest
+docker push <account-id>.dkr.ecr.ap-south-1.amazonaws.com/orderengine:latest
+
+# On EC2 — pull and run
+docker-compose -f docker-compose.prod.yml pull
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ---
 
-## 🚀 How to Run
+## 🚀 How to Run Locally
 
 ### Prerequisites
-- Java 17+
-- Maven
-- Docker
+```
+Java 17+ | Maven | Docker
+```
 
-### 1️⃣ Start Redis + RabbitMQ
-
+### Start Dependencies
 ```bash
 docker run -d --name redis -p 6379:6379 redis
 docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
 ```
 
-### 2️⃣ Run the Application
-
+### Run App
 ```bash
 mvn spring-boot:run
 ```
 
-### 3️⃣ Test with Postman
-
-```
-Base URL : http://localhost:8080/api/orders
-```
-
-> ⚠️ **Note:** H2 is an in-memory database. Data resets on every restart.
-> Always POST a new order before testing GET/PATCH/DELETE.
-
 ---
 
-## 🐳 Docker Services
+## 🐳 How to Run with Docker
 
-| Service | Port | Dashboard URL |
-|---|---|---|
-| **Redis** | `6379` | — |
-| **RabbitMQ** | `5672` | [http://localhost:15672](http://localhost:15672) → guest / guest |
-| **H2 Console** | — | [http://localhost:8080/h2-console](http://localhost:8080/h2-console) |
-
-### H2 Console Login
+```bash
+docker compose up --build
 ```
-JDBC URL  : jdbc:h2:mem:orderdb
-Username  : sa
-Password  : (leave empty)
+
+All services start together:
+```
+Spring Boot App  → localhost:8081
+PostgreSQL       → localhost:5432
+Redis            → localhost:6379
+RabbitMQ         → localhost:5672
+RabbitMQ UI      → localhost:15672
 ```
 
 ---
 
-## 💡 Key Learning Points
+## 💡 Key Interview Talking Points
 
-- **Clean Architecture** keeps business logic independent of frameworks — domain layer has zero Spring annotations
-- **Port/Adapter (SOLID-D)** means swapping H2 → PostgreSQL requires changing only the adapter, zero service changes
-- **Strategy Pattern** eliminates if-else chains for payment — add new payment type by just adding one class
-- **Observer Pattern** decouples order events from reactions — add SMS observer without touching service
-- **Factory Pattern** selects notification sender dynamically — no switch/if-else needed
-- **RabbitMQ** decouples notification sending — users get instant response, emails process in background
-- **Redis Cache** reduces DB load — repeated GET requests served from memory
+- **Port/Adapter** means swapping H2 → PostgreSQL → MongoDB changes only the adapter — service untouched
+- **Strategy Pattern** eliminates if-else for payments — add new payment type with one class
+- **RabbitMQ** decouples notifications — users get instant response, emails process asynchronously in background
+- **Redis** reduces DB load — repeated GETs served from memory in microseconds
+- **Priority Queue** ensures VIP orders (priority 5) always processed before normal ones (priority 1)
+- **Rate Limiter** protects against abuse — sliding window at O(1) per request
+- **AWS Deployment** — EC2 + RDS + ECR with Docker Compose for production
 
 ---
 
 ## 👨‍💻 Author
 
-**Pasindu** — 4th Year IT Undergraduate, University of Moratuwa
+**Pasindu** — 4th Year IT Undergraduate, University of Moratuwa, Sri Lanka
 
----
-
-> 💬 *"This project was built to demonstrate production-level backend patterns for software engineering interview preparation."*
+> *"Built to demonstrate production-level backend engineering — Design Patterns, Clean Architecture, System Design, DSA, and AWS Cloud Deployment."*
