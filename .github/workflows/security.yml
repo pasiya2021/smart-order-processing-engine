@@ -1,0 +1,62 @@
+name: security-baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so Gitleaks can scan old commits
+
+      - name: Prepare reports folder
+        run: mkdir -p reports
+
+      - name: Semgrep (code scan)
+        continue-on-error: true
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD:/src" -w /src semgrep/semgrep \
+            semgrep scan --config auto --sarif --output reports/semgrep.sarif
+
+      - name: Gitleaks (secrets, including git history)
+        continue-on-error: true
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo --redact --report-format json \
+            --report-path /repo/reports/gitleaks.json --exit-code 0
+
+      - name: Trivy (dependencies + Dockerfile/compose misconfig)
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:latest \
+            fs --scanners vuln,misconfig --format json \
+            --output reports/trivy-fs.json .
+
+      - name: Build image
+        continue-on-error: true
+        run: docker build -t orderengine:ci .
+
+      - name: Trivy (container image)
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" aquasec/trivy:latest \
+            image --format json --output /work/reports/trivy-image.json orderengine:ci
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-reports
+          path: reports/
+          retention-days: 14
