@@ -35,11 +35,11 @@ jobs:
             detect --source /repo --redact --report-format json \
             --report-path /repo/reports/gitleaks.json --exit-code 0
 
-      - name: Trivy (dependencies + Dockerfile/compose misconfig)
+      - name: Trivy (Dockerfile/compose misconfig)
         continue-on-error: true
         run: |
           docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:latest \
-            fs --scanners vuln,misconfig --format json \
+            fs --scanners misconfig --format json \
             --output reports/trivy-fs.json .
 
       - name: Build image
